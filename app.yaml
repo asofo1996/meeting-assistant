@@ -10,7 +10,7 @@ env_variables:
   DB_USER: 'postgres'
   DB_PASS: 'hong1357900@' # 이 부분은 그대로 둡니다.
   DB_NAME: 'postgres'
-  INSTANCE_CONNECTION_NAME: 'realtime-meeting-app-465901:asia-northeast3:meeting-db' # 이 부분은 그대로 둡니다.
+  INSTANCE_CONNECTION_NAME: 'realtime-meeting-app-465901:us-central1:meeting-db' # 이 부분은 그대로 둡니다.
 
 handlers:
 - url: /static

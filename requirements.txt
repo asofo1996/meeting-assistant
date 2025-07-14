@@ -3,7 +3,6 @@ Flask-SocketIO
 google-cloud-speech
 openai
 python-dotenv
-eventlet
 Flask-SQLAlchemy
 gunicorn
 gevent

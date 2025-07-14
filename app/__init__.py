@@ -26,13 +26,14 @@ def create_app():
     # OpenAI API 키 설정
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    # (수정됨) async_mode를 'gevent'로 변경합니다.
+    # (수정됨) 빠졌던 db.init_app(app) 라인을 다시 추가합니다.
+    db.init_app(app)
     socketio.init_app(app, async_mode='gevent')
 
     # Blueprint 등록
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
-
+    
     # 모델 임포트
     from . import models
 

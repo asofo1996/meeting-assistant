@@ -1,10 +1,8 @@
-# app/main.py (과부하 방지 기능이 추가된 최종 완성본)
-
 import os
 import time
 from flask import Blueprint, render_template, request, jsonify, current_app
 from google.cloud import speech
-from eventlet.queue import Queue
+from gevent.queue import Queue # <<< 이 부분이 eventlet에서 gevent로 변경되었습니다.
 
 from . import db, socketio
 from .models import Meeting, Transcript, AnswerStyle
@@ -115,20 +113,33 @@ def handle_start_transcription(data):
             if chunk is None:
                 break
             yield speech.StreamingRecognizeRequest(audio_content=chunk)
-    responses = speech_client.streaming_recognize(
-        config=streaming_config, requests=audio_generator(sid)
-    )
+    
+    try:
+        current_app.logger.info(f"[{sid}] Google speech_client.streaming_recognize 호출 시도...")
+        responses = speech_client.streaming_recognize(
+            config=streaming_config, requests=audio_generator(sid)
+        )
+        current_app.logger.info(f"[{sid}] Google speech_client.streaming_recognize 호출 성공. 응답 대기 시작.")
+    except Exception as e:
+        current_app.logger.error(f"[{sid}] streaming_recognize 호출 중 즉시 오류 발생: {e}", exc_info=True)
+        return
+
     socketio.start_background_task(target=process_responses, app=app, sid=sid, responses=responses, meeting_id=meeting_id)
 
 def process_responses(app, sid, responses, meeting_id):
     with app.app_context():
+        current_app.logger.info(f"[{sid}] Google 응답 처리 시작. 루프 진입 대기 중...")
         try:
-            for response in responses:
+            for i, response in enumerate(responses):
+                current_app.logger.info(f"[{sid}] Google로부터 {i+1}번째 응답 수신: {response}")
+                
                 if not response.results: continue
                 result = response.results[0]
                 if not result.alternatives: continue
+                
                 transcript = result.alternatives[0].transcript
                 socketio.emit('transcript_update', {'transcript': transcript, 'is_final': result.is_final}, room=sid)
+
                 if result.is_final and transcript.strip():
                     state = clients.get(sid)
                     if not state: break
@@ -136,25 +147,19 @@ def process_responses(app, sid, responses, meeting_id):
                     style_prompt = style.prompt if style else "Be a helpful assistant."
                     socketio.start_background_task(
                         target=process_final_transcript, 
-                        app=app,
-                        sid=sid, 
-                        meeting_id=meeting_id, 
-                        transcript=transcript, 
-                        style_prompt=style_prompt, 
-                        language=state['language']
+                        app=app, sid=sid, meeting_id=meeting_id, 
+                        transcript=transcript, style_prompt=style_prompt, language=state['language']
                     )
         except Exception as e:
-            current_app.logger.error(f"[{sid}] Error in response processing: {e}")
+            current_app.logger.error(f"[{sid}] Google 응답 처리 중 심각한 오류 발생: {e}", exc_info=True)
         finally:
-            current_app.logger.info(f"[{sid}] Response processing finished.")
+            current_app.logger.info(f"[{sid}] Google 응답 처리 루프 종료.")
 
 @socketio.on('audio_stream')
 def handle_audio_stream(payload):
-    """클라이언트로부터 오디오 청크를 받아 큐에 넣습니다."""
     sid = request.sid
     if sid in clients:
         q = clients[sid].get('audio_queue')
-        # (수정됨) 큐가 너무 많이 쌓이면(50개 이상) 새 데이터를 버려서 과부하를 막습니다.
         if q and q.qsize() < 50:
             audio_data = payload['data']
             q.put(audio_data)

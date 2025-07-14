@@ -8,3 +8,4 @@ gunicorn
 gevent
 SQLAlchemy-PyGres
 pg8000
+google-cloud-secret-managers

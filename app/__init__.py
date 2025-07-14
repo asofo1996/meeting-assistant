@@ -1,5 +1,3 @@
-# app/__init__.py (수정된 최종 코드)
-
 import os
 from flask import Flask
 from flask_socketio import SocketIO
@@ -28,14 +26,13 @@ def create_app():
     # OpenAI API 키 설정
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
-    # app과 확장(db, socketio)을 연결
-    db.init_app(app)
-    socketio.init_app(app, async_mode='eventlet')
+    # (수정됨) async_mode를 'gevent'로 변경합니다.
+    socketio.init_app(app, async_mode='gevent')
 
     # Blueprint 등록
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)
-    
+
     # 모델 임포트
     from . import models
 

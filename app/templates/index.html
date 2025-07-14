@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meeting Assistant - Home</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container home-container">
+        <h1 data-key="welcome_title">Welcome to Meeting Assistant</h1>
+        <p data-key="welcome_subtitle">Your real-time AI partner for successful meetings.</p>
+        <div class="language-selector">
+            <label for="language-select" data-key="select_language">Select Language:</label>
+            <select id="language-select">
+                <option value="en">English</option>
+                <option value="es">Español</option>
+                <option value="ko">한국어</option>
+            </select>
+        </div>
+        <button id="new-meeting-btn" data-key="create_new_meeting">Create New Meeting</button>
+        <a href="/history" class="button-link" data-key="view_past_meetings">View Past Meetings</a>
+        <a href="/styles" class="button-link" data-key="manage_answer_styles">Manage Answer Styles</a>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/language.js') }}"></script>
+</body>
+</html>

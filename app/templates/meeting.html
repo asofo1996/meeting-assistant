@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Meeting Room</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+</head>
+<body>
+    <div class="container meeting-container">
+        <div class="header">
+            <h1><span data-key="meeting_title">Meeting:</span> {{ meeting.title }}</h1>
+            <a href="/" data-key="back_to_home">Back to Home</a>
+        </div>
+
+        <div class="controls">
+            <button id="start-record-btn" data-key="start_recording">Start Recording</button>
+            <button id="stop-record-btn" disabled data-key="stop_recording">Stop Recording</button>
+            <div class="style-selector">
+                <label for="style-select" data-key="answer_style_label">Answer Style:</label>
+                <select id="style-select">
+                    {% for style in styles %}
+                    <option value="{{ style.id }}">{{ style.name }}</option>
+                    {% else %}
+                    <option value="0" disabled>No styles found. Please create one.</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <p id="status-text" data-key="status_idle">Status: Idle</p>
+        </div>
+
+        <div class="sheet-container">
+            <div class="sheet-header">
+                <div class="sheet-col" data-key="sheet_header_customer">Customer's Speech (Real-time)</div>
+                <div class="sheet-col" data-key="sheet_header_ai">AI Suggested Response</div>
+            </div>
+            <div id="transcript-sheet" class="sheet-body">
+                {% for transcript in transcripts %}
+                <div class="sheet-row" data-id="{{ transcript.id }}">
+                    <div class="sheet-cell transcript-cell">{{ transcript.text }}</div>
+                    <div class="sheet-cell gpt-cell">{{ transcript.gpt_response }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // 이 미팅의 정보를 JavaScript로 넘겨줍니다.
+        const MEETING_ID = {{ meeting.id }};
+        const LANGUAGE_CODE = '{{ meeting.language }}';
+    </script>
+    
+    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/language.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Answer Styles</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 data-key="styles_title">Manage Answer Styles</h1>
+            <a href="/" data-key="back_to_home">Back to Home</a>
+        </div>
+
+        <div class="style-form">
+            <h2 data-key="create_new_style">Create New Style</h2>
+            <input type="text" id="style-name" data-key="style_name_placeholder" placeholder="Style Name (e.g., Friendly Support)">
+            <textarea id="style-prompt" data-key="style_prompt_placeholder" placeholder="Enter the GPT prompt here. e.g., 'Respond in a very friendly and empathetic tone.'"></textarea>
+            <button id="create-style-btn" data-key="create_style_button">Create Style</button>
+        </div>
+
+        <div class="style-list">
+            <h2 data-key="existing_styles">Existing Styles</h2>
+            <ul id="existing-styles">
+                {% for style in styles %}
+                <li data-id="{{ style.id }}">
+                    <strong>{{ style.name }}</strong>
+                    <p>{{ style.prompt }}</p>
+                    <button class="delete-style-btn" data-key="delete">Delete</button>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/language.js') }}"></script>
+    
+    <script>
+        document.getElementById('create-style-btn').addEventListener('click', () => {
+            const name = document.getElementById('style-name').value;
+            const prompt = document.getElementById('style-prompt').value;
+            if (!name || !prompt) {
+                alert('Please fill in both name and prompt.');
+                return;
+            }
+            fetch('/api/style/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, prompt })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            });
+        });
+
+        document.getElementById('existing-styles').addEventListener('click', (e) => {
+            if (e.target.classList.contains('delete-style-btn')) {
+                const styleItem = e.target.parentElement;
+                const styleId = styleItem.dataset.id;
+                const currentLang = window.getSavedLanguage(); // 저장된 언어 가져오기
+                const confirmMessage = translations[currentLang].confirm_delete_style; // 번역된 확인 메시지 사용
+
+                if (confirm(confirmMessage)) {
+                    fetch(`/api/style/delete/${styleId}`, { method: 'DELETE' })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success) {
+                            styleItem.remove();
+                        } else {
+                            alert('Failed to delete style.');
+                        }
+                    });
+                }
+            }
+        });
+    </script>
+</body>
+</html>

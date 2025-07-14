@@ -6,3 +6,4 @@ python-dotenv
 eventlet
 Flask-SQLAlchemy
 gunicorn
+gevent

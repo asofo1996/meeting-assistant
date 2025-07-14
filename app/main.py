@@ -1,4 +1,4 @@
-# app/main.py (최종 수정본)
+# app/main.py (과부하 방지 기능이 추가된 최종 완성본)
 
 import os
 import time
@@ -149,13 +149,15 @@ def process_responses(app, sid, responses, meeting_id):
             current_app.logger.info(f"[{sid}] Response processing finished.")
 
 @socketio.on('audio_stream')
-def handle_audio_stream(payload): # <<-- (수정됨) 'audio_data'에서 'payload'로 변경
+def handle_audio_stream(payload):
     """클라이언트로부터 오디오 청크를 받아 큐에 넣습니다."""
     sid = request.sid
     if sid in clients:
-        # (수정됨) 딕셔너리에서 실제 오디오 데이터를 추출합니다.
-        audio_data = payload['data']
-        clients[sid]['audio_queue'].put(audio_data)
+        q = clients[sid].get('audio_queue')
+        # (수정됨) 큐가 너무 많이 쌓이면(50개 이상) 새 데이터를 버려서 과부하를 막습니다.
+        if q and q.qsize() < 50:
+            audio_data = payload['data']
+            q.put(audio_data)
 
 @socketio.on('stop_transcription')
 def handle_stop_transcription(data):

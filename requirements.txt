@@ -6,3 +6,5 @@ python-dotenv
 Flask-SQLAlchemy
 gunicorn
 gevent
+SQLAlchemy-PyGres
+pg8000

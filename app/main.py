@@ -5,7 +5,13 @@ from google.cloud import speech
 from gevent.queue import Queue # <<< 이 부분이 eventlet에서 gevent로 변경되었습니다.
 
 from . import db, socketio
-from .models import Meeting, Transcript, AnswerStyle
+from .models import (
+    Meeting,
+    Transcript,
+    AnswerStyle,
+    AppConfig,
+    FreeUser,
+)
 from .utils import get_gpt_suggestion
 
 main = Blueprint('main', __name__)
@@ -15,14 +21,18 @@ clients = {}
 # --- 1. 페이지 라우팅 ---
 @main.route('/')
 def index():
-    return render_template('index.html')
+    config = AppConfig.query.first()
+    ad = config.advertisement_html if config else ''
+    return render_template('index.html', advertisement=ad)
 
 @main.route('/meeting/<int:meeting_id>')
 def meeting_room(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
     styles = AnswerStyle.query.all()
     transcripts = Transcript.query.filter_by(meeting_id=meeting_id).order_by(Transcript.timestamp).all()
-    return render_template('meeting.html', meeting=meeting, styles=styles, transcripts=transcripts)
+    config = AppConfig.query.first()
+    ad = config.advertisement_html if config else ''
+    return render_template('meeting.html', meeting=meeting, styles=styles, transcripts=transcripts, advertisement=ad)
 
 @main.route('/history')
 def history():
@@ -33,6 +43,39 @@ def history():
 def styles():
     all_styles = AnswerStyle.query.all()
     return render_template('styles.html', styles=all_styles)
+
+
+@main.route('/admin', methods=['GET', 'POST'])
+def admin_page():
+    config = AppConfig.query.first()
+    if not config:
+        config = AppConfig()
+        db.session.add(config)
+        db.session.commit()
+    if request.method == 'POST':
+        config.plan_cost = float(request.form.get('plan_cost', config.plan_cost or 0))
+        config.payment_method = request.form.get('payment_method')
+        config.advertisement_html = request.form.get('advertisement_html')
+        db.session.commit()
+    free_users = FreeUser.query.all()
+    return render_template('admin.html', config=config, free_users=free_users)
+
+
+@main.route('/admin/free_user', methods=['POST'])
+def add_free_user():
+    email = request.form.get('email')
+    if email and not FreeUser.query.filter_by(email=email).first():
+        db.session.add(FreeUser(email=email))
+        db.session.commit()
+    return ('', 204)
+
+
+@main.route('/admin/free_user/<int:user_id>', methods=['DELETE'])
+def delete_free_user(user_id):
+    user = FreeUser.query.get_or_404(user_id)
+    db.session.delete(user)
+    db.session.commit()
+    return ('', 204)
 
 
 # --- 2. API 엔드포인트 ---

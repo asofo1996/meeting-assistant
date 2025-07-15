@@ -1,7 +1,7 @@
 /* General Body Styles */
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    background-color: #f4f7f9;
+    background: linear-gradient(to bottom right, #f5f8fa, #eaf2f8);
     color: #333;
     margin: 0;
     padding: 20px;
@@ -179,3 +179,12 @@ li a {
     margin-top: 0.5rem;
     align-self: flex-end;
 }
+
+.advertisement {
+    margin-top: 2rem;
+    padding: 1rem;
+    background: #fff7cc;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+

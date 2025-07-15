@@ -2,6 +2,7 @@
 let socket;
 let audioContext;
 let isRecording = false;
+let currentTranscriptRow = null;
 
 // HTML 문서에서 필요한 요소들을 미리 찾아 변수에 저장합니다.
 const startBtn = document.getElementById('start-record-btn');

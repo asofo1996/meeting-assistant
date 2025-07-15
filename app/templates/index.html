@@ -21,6 +21,9 @@
         <button id="new-meeting-btn" data-key="create_new_meeting">Create New Meeting</button>
         <a href="/history" class="button-link" data-key="view_past_meetings">View Past Meetings</a>
         <a href="/styles" class="button-link" data-key="manage_answer_styles">Manage Answer Styles</a>
+        {% if advertisement %}
+        <div class="advertisement">{{ advertisement|safe }}</div>
+        {% endif %}
     </div>
 
     <script src="{{ url_for('static', filename='js/translations.js') }}"></script>

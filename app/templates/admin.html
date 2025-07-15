@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin Settings</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Admin Panel</h1>
+            <a href="/" data-key="back_to_home">Back to Home</a>
+        </div>
+        <form method="POST">
+            <label>Plan Cost ($)</label>
+            <input type="number" step="0.01" name="plan_cost" value="{{ config.plan_cost }}">
+            <label>Payment Method</label>
+            <input type="text" name="payment_method" value="{{ config.payment_method or '' }}">
+            <label>Advertisement HTML</label>
+            <textarea name="advertisement_html" rows="4">{{ config.advertisement_html or '' }}</textarea>
+            <button type="submit">Save Settings</button>
+        </form>
+        <hr>
+        <h2>Free Users</h2>
+        <form id="free-user-form" method="POST" action="/admin/free_user">
+            <input type="email" name="email" placeholder="user@example.com" required>
+            <button type="submit">Add Free User</button>
+        </form>
+        <ul id="free-user-list">
+            {% for user in free_users %}
+            <li data-id="{{ user.id }}">{{ user.email }} <button class="delete-user">Delete</button></li>
+            {% endfor %}
+        </ul>
+    </div>
+    <script>
+        document.getElementById('free-user-list').addEventListener('click', function(e) {
+            if (e.target.classList.contains('delete-user')) {
+                const li = e.target.parentElement;
+                const id = li.dataset.id;
+                fetch(`/admin/free_user/${id}`, {method: 'DELETE'})
+                    .then(() => li.remove());
+            }
+        });
+    </script>
+</body>
+</html>
+

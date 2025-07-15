@@ -1,5 +1,7 @@
 import os
-from google.cloud import speech
+import pytest
+
+speech = pytest.importorskip('google.cloud.speech')
 
 # .env 파일이나 다른 설정 없이, 직접 자격 증명 파일을 지정합니다.
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = 'google_credentials.json'

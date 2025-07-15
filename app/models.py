@@ -5,7 +5,11 @@ import datetime
 
 class Meeting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False, default=f"Meeting {datetime.date.today().strftime('%Y-%m-%d')}")
+    title = db.Column(
+        db.String(100),
+        nullable=False,
+        default=lambda: f"Meeting {datetime.date.today().strftime('%Y-%m-%d')}"
+    )
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     audio_file_path = db.Column(db.String(200), nullable=True)
     language = db.Column(db.String(10), nullable=False, default='en-US')

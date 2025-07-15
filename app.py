@@ -178,7 +178,7 @@ if st.session_state.meeting_started:
         st.audio(audio_bytes, format="audio/wav")
         
         with st.spinner("음성을 텍스트로 변환 중..."):
-            transcript_text = transcribe(audio_bytes)
+            transcript_text = transcribe_audio(audio_bytes)
 
         if transcript_text:
             st.success("음성 변환 완료!")

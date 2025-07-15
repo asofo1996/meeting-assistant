@@ -13,13 +13,3 @@ This Flask application provides real-time transcription of speech and GPT-based 
    python run.py
    ```
 4. Open `http://localhost:5000` in your browser.
-
-**Note**: The old Streamlit version has been removed. Running `python app.py`
-will simply start the Flask server described above.
-
-## Features
-- Real-time speech transcription and AI suggestions
-- History view of past meetings
-- Manage answer styles used for GPT responses
-
-The previous Google Sheets integration has been removed; all data is kept within the app.

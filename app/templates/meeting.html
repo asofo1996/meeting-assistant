@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
 </head>
-<!-- (수정됨) body 태그에 data 속성으로 변수를 전달합니다. -->
+<!-- body 태그에 data 속성을 사용하여 서버 변수를 안전하게 전달합니다. -->
 <body data-meeting-id="{{ meeting.id }}" data-language-code="{{ meeting.language }}">
     <div class="container meeting-container">
         <div class="header">
@@ -36,7 +36,7 @@
                 <div class="sheet-col" data-key="sheet_header_ai">AI Suggested Response</div>
             </div>
             <div id="transcript-sheet" class="sheet-body">
-                <!-- 기존 녹취록 표시 -->
+                <!-- DB에 저장된 기존 녹취록을 여기에 표시합니다. -->
                 {% for transcript in transcripts %}
                 <div class="sheet-row" data-id="{{ transcript.id }}">
                     <div class="sheet-cell transcript-cell">{{ transcript.text }}</div>
@@ -47,16 +47,17 @@
         </div>
     </div>
     
-    <!-- (수정됨) data 속성에서 변수 값을 읽어옵니다. -->
+    <!-- data 속성에서 변수 값을 읽어와 JavaScript에서 사용합니다. -->
     <script>
         const MEETING_ID = document.body.dataset.meetingId;
         const LANGUAGE_CODE = document.body.dataset.languageCode;
     </script>
     
+    <!-- 스크립트 파일들을 올바른 순서로 로드합니다. -->
     <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
     <script src="{{ url_for('static', filename='js/language.js') }}"></script>
     
-    <!-- 버전 번호를 추가하여 브라우저가 항상 새 파일을 불러오도록 합니다. -->
-    <script src="{{ url_for('static', filename='js/main.js', v='2.0') }}"></script>
+    <!-- 버전 번호(v=2.1)를 추가하여 브라우저가 항상 새로운 main.js 파일을 불러오도록 합니다. -->
+    <script src="{{ url_for('static', filename='js/main.js', v='2.1') }}"></script>
 </body>
 </html>

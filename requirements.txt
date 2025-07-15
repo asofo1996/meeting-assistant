@@ -3,9 +3,6 @@ Flask-SocketIO==5.3.6
 python-engineio==4.8.0
 python-socketio==5.8.0
 
-# gevent가 WebSocket을 사용하기 위한 필수 라이브러리입니다.
-gevent-websocket
-
 google-cloud-speech
 openai
 python-dotenv

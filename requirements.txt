@@ -2,7 +2,6 @@ Flask
 Flask-SocketIO==5.3.6
 python-engineio==4.8.0
 python-socketio==5.8.0
-
 google-cloud-speech
 openai
 python-dotenv

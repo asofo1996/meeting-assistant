@@ -1,28 +1,11 @@
-import streamlit as st
-import os
-import io
-import pandas as pd
-from datetime import datetime
-from streamlit_audiorecorder import st_audiorecorder
-from google.cloud import speech
-import openai
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+"""Run the Flask Meeting Assistant.
 
-# --- 1. 초기 설정 ---
+This file used to contain a Streamlit implementation. To avoid confusing
+`ModuleNotFoundError` messages when running `python app.py`, it now simply
+launches the Flask app defined in ``run.py``.
+"""
 
-# 페이지 레이아웃을 넓게 설정
-st.set_page_config(layout="wide")
-
-# Google Cloud 자격 증명 설정
-# App Engine 배포 시에는 자동으로 인증되지만, 로컬 테스트를 위해 파일 경로를 지정할 수 있습니다.
-try:
-    # 로컬 테스트용 경로 (secret 폴더 안에 google_credentials.json 파일이 있다고 가정)
-    credentials_path = os.path.join("secret", "google_credentials.json")
-    if os.path.exists(credentials_path):
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-except Exception:
-    pass # 배포 환경에서는 이 부분이 없어도 됩니다.
+from run import app, socketio
 
 # OpenAI API 키 설정
 # Streamlit Cloud의 Secrets 또는 로컬 환경 변수에서 키를 가져옵니다.
@@ -212,4 +195,3 @@ if st.session_state.meeting_started:
 
 else:
     st.info("왼쪽 사이드바에서 '새 미팅 시작' 버튼을 눌러주세요.")
-

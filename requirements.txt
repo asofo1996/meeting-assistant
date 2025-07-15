@@ -1,8 +1,8 @@
-streamlit
-streamlit-audiorecorder
+Flask
+Flask-SocketIO
+Flask-SQLAlchemy
+gevent
+python-dotenv
 google-cloud-speech
+google-cloud-secret-manager
 openai
-gspread
-oauth2client
-pydub
-pandas

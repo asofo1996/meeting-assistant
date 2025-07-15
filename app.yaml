@@ -1,22 +1,10 @@
 runtime: python311
 instance_class: F1
-entrypoint: gunicorn --worker-class gevent -w 1 --timeout 0 run:app
 
-# App environment variables. The OpenAI key is pulled from Secret Manager.
-env_variables:
-  OPENAI_API_KEY_SECRET_NAME: 'openai-api-key'
-  DB_USER: 'postgres'
-  DB_PASS: '1234' 
-  DB_NAME: 'postgres'
-  INSTANCE_CONNECTION_NAME: 'realtime-meeting-app-465901:asia-northeast3:meeting-db'
+entrypoint: streamlit run app.py --server.port $PORT
 
-# (Added) Network settings to enable WebSockets.
-network:
-  session_affinity: true
-
-# URL request handlers.
 handlers:
 - url: /static
-  static_dir: app/static
+  static_dir: static
 - url: /.*
   script: auto

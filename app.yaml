@@ -8,7 +8,7 @@ env_variables:
   DB_USER: 'postgres'
   DB_PASS: '1234' 
   DB_NAME: 'postgres'
-  INSTANCE_CONNECTION_NAME: 'realtime-meeting-app-465901:us-central1:meeting-db'
+  INSTANCE_CONNECTION_NAME: 'realtime-meeting-app-465901:asia-northeast3:meeting-db'
 
 # (Added) Network settings to enable WebSockets.
 network:

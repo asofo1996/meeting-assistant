@@ -9,7 +9,7 @@ const statusText = document.getElementById('status-text');
 const transcriptSheet = document.getElementById('transcript-sheet');
 const styleSelect = document.getElementById('style-select');
 
-// (수정됨) WebSocket 대신 Polling 연결을 강제하여 안정성을 높입니다.
+// WebSocket 대신 Polling 연결을 강제하여 App Engine과의 호환성을 높입니다.
 socket = io({ transports: ['polling'] });
 
 socket.on('connect', () => {
@@ -56,8 +56,6 @@ startBtn.addEventListener('click', async () => {
     }
 });
 
-// -- 아래는 변경되지 않은 나머지 코드입니다 --
-
 socket.on('transcript_update', (data) => {
     if (!currentTranscriptRow) {
         createNewRow();
@@ -71,6 +69,7 @@ socket.on('transcript_update', (data) => {
         transcriptCell.classList.add('interim');
     }
 });
+
 socket.on('final_result', (data) => {
     const rows = transcriptSheet.querySelectorAll('.sheet-row');
     for (let i = rows.length - 1; i >= 0; i--) {
@@ -84,6 +83,7 @@ socket.on('final_result', (data) => {
         }
     }
 });
+
 stopBtn.addEventListener('click', () => {
     if (!isRecording) return;
     isRecording = false;
@@ -96,18 +96,22 @@ stopBtn.addEventListener('click', () => {
         });
     }
 });
+
 styleSelect.addEventListener('change', () => {
     if (isRecording) {
         socket.emit('change_style', { style_id: styleSelect.value });
     }
 });
+
 socket.on('style_changed_ack', (data) => {
     console.log(data.message);
 });
+
 function updateButtonState() {
     startBtn.disabled = isRecording;
     stopBtn.disabled = !isRecording;
 }
+
 function createNewRow() {
     const row = document.createElement('div');
     row.className = 'sheet-row';

@@ -27,7 +27,6 @@ class AnswerStyle(db.Model):
     name = db.Column(db.String(100), unique=True, nullable=False)
     prompt = db.Column(db.Text, nullable=False)
 
-
 class AppConfig(db.Model):
     """Simple key-value settings table for admin configuration."""
     id = db.Column(db.Integer, primary_key=True)
@@ -39,4 +38,3 @@ class AppConfig(db.Model):
 class FreeUser(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-

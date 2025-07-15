@@ -13,7 +13,6 @@ This Flask application provides real-time transcription of speech and GPT-based 
    python run.py
    ```
 4. Open `http://localhost:5000` in your browser.
-
 **Note**: The old Streamlit version has been removed. Running `python app.py`
 will simply start the Flask server described above.
 
@@ -27,4 +26,3 @@ The previous Google Sheets integration has been removed; all data is kept within
 
 ### Admin Page
 Visit `/admin` to configure the plan cost and payment method. You can also manage a list of free users and edit an advertisement snippet that appears on the home and meeting pages.
-

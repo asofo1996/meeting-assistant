@@ -1,5 +1,3 @@
-// app/static/js/main.js (데이터 전송 방식 수정 최종본)
-
 let socket;
 let audioContext;
 let isRecording = false;
@@ -11,8 +9,8 @@ const statusText = document.getElementById('status-text');
 const transcriptSheet = document.getElementById('transcript-sheet');
 const styleSelect = document.getElementById('style-select');
 
-// Socket.IO 연결
-socket = io();
+// (수정됨) WebSocket 대신 Polling 연결을 강제하여 안정성을 높입니다.
+socket = io({ transports: ['polling'] });
 
 socket.on('connect', () => {
     console.log('진단 1: 서버에 성공적으로 연결되었습니다.');
@@ -36,7 +34,6 @@ startBtn.addEventListener('click', async () => {
 
         workletNode.port.onmessage = (event) => {
             console.log('진단 5: 오디오 청크를 성공적으로 처리하여 서버로 전송합니다.');
-            // (수정됨) 데이터를 딕셔너리로 감싸서 전송합니다.
             socket.emit('audio_stream', { 'data': event.data });
         };
         

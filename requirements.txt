@@ -1,8 +1,8 @@
 Flask
-# 실시간 통신 라이브러리를 안정적인 버전으로 고정합니다.
-Flask-SocketIO==5.3.6
-python-engineio==4.8.0
-python-socketio==5.8.0
+# 버전 고정을 제거하여 최신 호환 버전을 사용하도록 합니다.
+Flask-SocketIO
+python-engineio
+python-socketio
 
 google-cloud-speech
 openai

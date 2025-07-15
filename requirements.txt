@@ -6,3 +6,4 @@ python-dotenv
 google-cloud-speech
 google-cloud-secret-manager
 openai
+

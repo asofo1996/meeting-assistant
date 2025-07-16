@@ -45,6 +45,9 @@
                 {% endfor %}
             </div>
         </div>
+        {% if advertisement %}
+        <div class="advertisement">{{ advertisement|safe }}</div>
+        {% endif %}
     </div>
     
     <!-- data 속성에서 변수 값을 읽어와 JavaScript에서 사용합니다. -->
@@ -61,3 +64,4 @@
     <script src="{{ url_for('static', filename='js/main.js', v='2.1') }}"></script>
 </body>
 </html>
+

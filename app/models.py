@@ -5,7 +5,11 @@ import datetime
 
 class Meeting(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(100), nullable=False, default=f"Meeting {datetime.date.today().strftime('%Y-%m-%d')}")
+    title = db.Column(
+        db.String(100),
+        nullable=False,
+        default=lambda: f"Meeting {datetime.date.today().strftime('%Y-%m-%d')}"
+    )
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     audio_file_path = db.Column(db.String(200), nullable=True)
     language = db.Column(db.String(10), nullable=False, default='en-US')
@@ -22,3 +26,17 @@ class AnswerStyle(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), unique=True, nullable=False)
     prompt = db.Column(db.Text, nullable=False)
+
+
+class AppConfig(db.Model):
+    """Simple key-value settings table for admin configuration."""
+    id = db.Column(db.Integer, primary_key=True)
+    plan_cost = db.Column(db.Float, nullable=False, default=0.0)
+    payment_method = db.Column(db.String(100), nullable=True)
+    advertisement_html = db.Column(db.Text, nullable=True)
+
+
+class FreeUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+

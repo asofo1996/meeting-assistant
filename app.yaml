@@ -1,7 +1,7 @@
 runtime: python311
 instance_class: F1
 
-entrypoint: gunicorn -b :$PORT run:app
+entrypoint: python3 run.py
 
 env_variables:
   INSTANCE_CONNECTION_NAME: "realtime-meeting-app-465901:asia-northeast3:meeting-db"

@@ -102,13 +102,17 @@ class AudioStream:
 
     def __call__(self):
         while True:
-            yield self.queue.get()
+            chunk = self.queue.get()
+            if chunk is None:
+                return
+            yield chunk
 
     def put(self, data):
         self.queue.put(data)
 
 def transcription_worker(stream, sid, meeting_id, language_code, answer_style_id):
     """백그라운드에서 음성 인식을 처리하는 워커 함수."""
+    app = current_app._get_current_object()
     client = speech.SpeechClient()
     config = speech.RecognitionConfig(
         encoding=speech.RecognitionConfig.AudioEncoding.LINEAR16,
@@ -135,25 +139,22 @@ def transcription_worker(stream, sid, meeting_id, language_code, answer_style_id
             transcript = result.alternatives[0].transcript
             
             if result.is_final:
-                current_app.logger.info(f"Final Transcript for {sid}: {transcript}")
-                
-                # DB에 최종 스크립트 저장
-                new_transcript = Transcript(
-                    meeting_id=meeting_id,
-                    speaker='customer',
-                    text=transcript
-                )
-                with main.app.app_context(): # 별도 스레드에서 DB 접근을 위함
+                with app.app_context():
+                    current_app.logger.info(f"Final Transcript for {sid}: {transcript}")
+                    new_transcript = Transcript(
+                        meeting_id=meeting_id,
+                        speaker='customer',
+                        text=transcript
+                    )
                     db.session.add(new_transcript)
                     db.session.commit()
-
-                socketio.emit('final_transcript', {'transcript': transcript}, room=sid)
-                
-                # OpenAI API 호출하여 AI 답변 생성
-                style = AnswerStyle.query.get(answer_style_id)
-                suggestion = get_gpt_suggestion(transcript, style.prompt if style else "Answer professionally.")
-                socketio.emit('ai_response', {'text': suggestion}, room=sid)
-
+                    
+                    socketio.emit('final_transcript', {'transcript': transcript}, room=sid)
+                    
+                    style = AnswerStyle.query.get(answer_style_id)
+                    prompt = style.prompt if style else "Answer professionally."
+                    suggestion = get_gpt_suggestion(transcript, prompt)
+                    socketio.emit('ai_response', {'text': suggestion}, room=sid)
             else:
                 socketio.emit('interim_transcript', {'transcript': transcript}, room=sid)
 
@@ -172,6 +173,7 @@ def handle_connect():
 def handle_disconnect():
     """클라이언트 연결 종료 시 호출됩니다."""
     if request.sid in clients:
+        clients[request.sid]['stream'].put(None)
         del clients[request.sid]
     current_app.logger.info(f"Client disconnected: {request.sid}")
 
@@ -207,8 +209,7 @@ def handle_stop_session():
     """클라이언트가 녹음 종료를 요청할 때 호출됩니다."""
     sid = request.sid
     if sid in clients:
-        # 워커 스레드가 자연스럽게 종료되도록 큐에 None을 넣어 신호를 줄 수 있습니다.
-        # 이 예제에서는 단순화를 위해 클라이언트 딕셔너리에서 제거만 합니다.
+        clients[sid]['stream'].put(None)
         del clients[sid]
         current_app.logger.info(f"Stopped session for {sid}")
 
@@ -218,5 +219,4 @@ def handle_change_style(data):
     sid = request.sid
     new_style_id = data.get('answer_style_id')
     current_app.logger.info(f"Client {sid} changed style to {new_style_id}")
-    # 필요하다면, 이 정보를 clients 딕셔너리에 저장하여
-    # 다음 AI 답변 생성 시 반영할 수 있습니다.
+    

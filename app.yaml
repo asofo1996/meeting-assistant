@@ -24,4 +24,3 @@ readiness_check:
   timeout_sec: 4
   failure_threshold: 2
   success_threshold: 2
-

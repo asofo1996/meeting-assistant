@@ -3,10 +3,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 
-# 중요: dotenv는 이제 프로덕션 코드에서 사용하지 않습니다.
-# from dotenv import load_dotenv
-# load_dotenv()
-
 db = SQLAlchemy()
 socketio = SocketIO()
 
@@ -17,13 +13,12 @@ def create_app(debug=False):
     app.config['SECRET_KEY'] = 'gjr39dkjn344_!67#'
 
     # --- 최종 프로덕션 데이터베이스 설정 ---
-    # App Engine 환경 변수를 직접 사용합니다.
+    # App Engine 환경 변수를 직접 사용하여 Cloud SQL 연결 URI 설정
     db_user = os.environ.get("DB_USER")
     db_pass = os.environ.get("DB_PASS")
     db_name = os.environ.get("DB_NAME")
     instance_connection_name = os.environ.get("INSTANCE_CONNECTION_NAME")
 
-    # Cloud SQL 연결 URI
     db_uri = (
         f"postgresql+pg8000://{db_user}:{db_pass}@/{db_name}"
         f"?unix_sock=/cloudsql/{instance_connection_name}/.s.PGSQL.5432"
@@ -37,7 +32,6 @@ def create_app(debug=False):
 
     with app.app_context():
         from . import main, models
-        # 첫 배포 시 테이블을 생성하기 위해 유지합니다.
-        # db.create_all()
+        # db.create_all() # 프로덕션 환경에서는 주석 처리 유지
         app.register_blueprint(main.main)
         return app

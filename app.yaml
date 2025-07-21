@@ -1,7 +1,7 @@
 runtime: python311
 instance_class: F1
 
-entrypoint: python3 run.py
+entrypoint: gunicorn -b :$PORT run:app
 
 env_variables:
   INSTANCE_CONNECTION_NAME: "realtime-meeting-app-465901:asia-northeast3:meeting-db"
@@ -13,6 +13,13 @@ env_variables:
 handlers:
 - url: /static
   static_dir: app/static
-
 - url: /.*
   script: auto
+
+# 앱이 트래픽을 받을 준비가 되었는지 확인하는 설정 추가
+readiness_check:
+  path: "/health"
+  check_interval_sec: 5
+  timeout_sec: 4
+  failure_threshold: 2
+  success_threshold: 2

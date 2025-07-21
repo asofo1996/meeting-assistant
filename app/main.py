@@ -241,3 +241,8 @@ def process_final_transcript(app, sid, meeting_id, transcript, style_prompt, lan
         'text': transcript,
         'gpt_response': gpt_response
     }, room=sid)
+
+@main.route('/health')
+def health_check():
+    """App Engine a readiness check."""
+    return 'OK', 200

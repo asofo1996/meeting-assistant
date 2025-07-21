@@ -38,6 +38,6 @@ def create_app(debug=False):
     with app.app_context():
         from . import main, models
         # 첫 배포 시 테이블을 생성하기 위해 유지합니다.
-        db.create_all()
+        # db.create_all()
         app.register_blueprint(main.main)
         return app

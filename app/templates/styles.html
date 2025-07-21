@@ -1,84 +1,114 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Manage Answer Styles</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 data-key="styles_title">Manage Answer Styles</h1>
-            <a href="/" data-key="back_to_home">Back to Home</a>
-        </div>
+{% extends 'base.html' %}
 
-        <div class="style-form">
-            <h2 data-key="create_new_style">Create New Style</h2>
-            <input type="text" id="style-name" data-key="style_name_placeholder" placeholder="Style Name (e.g., Friendly Support)">
-            <textarea id="style-prompt" data-key="style_prompt_placeholder" placeholder="Enter the GPT prompt here. e.g., 'Respond in a very friendly and empathetic tone.'"></textarea>
-            <button id="create-style-btn" data-key="create_style_button">Create Style</button>
-        </div>
+{% block title %}Manage Answer Styles - Meeting Assistant{% endblock %}
 
-        <div class="style-list">
-            <h2 data-key="existing_styles">Existing Styles</h2>
-            <ul id="existing-styles">
-                {% for style in styles %}
-                <li data-id="{{ style.id }}">
-                    <strong>{{ style.name }}</strong>
-                    <p>{{ style.prompt }}</p>
-                    <button class="delete-style-btn" data-key="delete">Delete</button>
-                </li>
-                {% endfor %}
-            </ul>
+{% block content %}
+<header class="mb-12">
+    <h1 class="text-4xl font-bold">Manage Answer Styles</h1>
+    <p class="text-lg text-gray-400 mt-2">Create and manage custom personalities for your AI assistant.</p>
+</header>
+
+<div class="grid lg:grid-cols-3 gap-12">
+    <div class="lg:col-span-1">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 p-6 shadow-lg">
+            <h2 class="text-2xl font-bold mb-6">Create New Style</h2>
+            <div class="space-y-6">
+                <div>
+                    <label for="style-name" class="block text-sm font-medium text-gray-300 mb-2">Style Name</label>
+                    <input type="text" id="style-name" placeholder="e.g., Friendly Support" class="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-purple-500 focus:outline-none">
+                </div>
+                <div>
+                    <label for="style-prompt" class="block text-sm font-medium text-gray-300 mb-2">System Prompt</label>
+                    <textarea id="style-prompt" rows="5" placeholder="e.g., Respond in a very friendly and empathetic tone." class="w-full bg-gray-700 text-white rounded-md px-4 py-2 border border-gray-600 focus:ring-2 focus:ring-purple-500 focus:outline-none"></textarea>
+                </div>
+                <button id="create-style-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition-colors shadow-md">
+                    Create Style
+                </button>
+            </div>
         </div>
     </div>
-    
-    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/language.js') }}"></script>
-    
-    <script>
-        document.getElementById('create-style-btn').addEventListener('click', () => {
-            const name = document.getElementById('style-name').value;
-            const prompt = document.getElementById('style-prompt').value;
-            if (!name || !prompt) {
-                alert('Please fill in both name and prompt.');
-                return;
-            }
-            fetch('/api/style/create', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, prompt })
-            })
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + data.message);
-                }
-            });
-        });
 
-        document.getElementById('existing-styles').addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-style-btn')) {
-                const styleItem = e.target.parentElement;
-                const styleId = styleItem.dataset.id;
-                const currentLang = window.getSavedLanguage(); // 저장된 언어 가져오기
-                const confirmMessage = translations[currentLang].confirm_delete_style; // 번역된 확인 메시지 사용
+    <div class="lg:col-span-2">
+        <div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
+            <div class="p-6 border-b border-gray-700">
+                 <h2 class="text-2xl font-bold">Existing Styles</h2>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left">
+                    <thead class="bg-gray-700/50">
+                        <tr>
+                            <th class="p-4 font-semibold">Style Name</th>
+                            <th class="p-4 font-semibold">Prompt Preview</th>
+                            <th class="p-4 font-semibold text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="existing-styles">
+                        {% for style in styles %}
+                        <tr class="border-t border-gray-700 hover:bg-gray-700/50 transition-colors" data-id="{{ style.id }}">
+                            <td class="p-4 font-medium">{{ style.name }}</td>
+                            <td class="p-4 text-gray-400 italic truncate max-w-sm">"{{ style.prompt }}"</td>
+                            <td class="p-4 text-right">
+                                <button class="delete-style-btn bg-red-600/50 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
 
-                if (confirm(confirmMessage)) {
-                    fetch(`/api/style/delete/${styleId}`, { method: 'DELETE' })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            styleItem.remove();
-                        } else {
-                            alert('Failed to delete style.');
-                        }
-                    });
-                }
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/language.js') }}"></script>
+<script>
+    document.getElementById('create-style-btn').addEventListener('click', () => {
+        const name = document.getElementById('style-name').value;
+        const prompt = document.getElementById('style-prompt').value;
+        if (!name || !prompt) {
+            alert('Please fill in both name and prompt.');
+            return;
+        }
+        fetch('/api/style/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, prompt })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
             }
         });
-    </script>
-</body>
-</html>
+    });
+
+    document.getElementById('existing-styles').addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-style-btn')) {
+            const styleRow = e.target.closest('tr');
+            if (!styleRow) return;
+
+            const styleId = styleRow.dataset.id;
+            const currentLang = window.getSavedLanguage ? window.getSavedLanguage() : 'en';
+            const confirmMessage = translations[currentLang]?.confirm_delete_style || 'Are you sure you want to delete this style?';
+
+            if (confirm(confirmMessage)) {
+                fetch(`/api/style/delete/${styleId}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        styleRow.remove();
+                    } else {
+                        alert('Failed to delete style.');
+                    }
+                });
+            }
+        }
+    });
+</script>
+{% endblock %}

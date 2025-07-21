@@ -1,52 +1,77 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Meeting History</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 data-key="history_title">Meeting History</h1>
-            <a href="/" data-key="back_to_home">Back to Home</a>
-        </div>
-        <ul id="meeting-list">
-            {% for meeting in meetings %}
-            <li data-id="{{ meeting.id }}">
-                <a href="/meeting/{{ meeting.id }}">{{ meeting.title }} - {{ meeting.created_at.strftime('%Y-%m-%d %H:%M') }}</a>
-                <button class="delete-meeting-btn" data-key="delete">Delete</button>
-            </li>
-            {% else %}
-            <li data-key="no_history">No past meetings found.</li>
-            {% endfor %}
-        </ul>
+{% extends 'base.html' %}
+
+{% block title %}Meeting History - Meeting Assistant{% endblock %}
+
+{% block content %}
+<header class="mb-12">
+    <h1 class="text-4xl font-bold">Meeting History</h1>
+    <p class="text-lg text-gray-400 mt-2">Review your past meetings and AI-generated transcripts.</p>
+</header>
+
+<div class="bg-gray-800 rounded-xl border border-gray-700 shadow-lg overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead class="bg-gray-700/50">
+                <tr>
+                    <th class="p-4 font-semibold">Meeting Title</th>
+                    <th class="p-4 font-semibold">Date Created</th>
+                    <th class="p-4 font-semibold">Language</th>
+                    <th class="p-4 font-semibold text-right">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="meeting-list">
+                {% for meeting in meetings %}
+                <tr class="border-t border-gray-700 hover:bg-gray-700/50 transition-colors" data-id="{{ meeting.id }}">
+                    <td class="p-4 font-medium">
+                        <a href="/meeting/{{ meeting.id }}" class="hover:text-blue-400">{{ meeting.title }}</a>
+                    </td>
+                    <td class="p-4 text-gray-400">{{ meeting.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td class="p-4 text-gray-400">
+                        <span class="bg-gray-600 px-2 py-1 text-sm rounded-full">{{ meeting.language }}</span>
+                    </td>
+                    <td class="p-4 text-right">
+                        <button class="delete-meeting-btn bg-red-600/50 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-md text-sm transition-colors">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="p-8 text-center text-gray-500">No past meetings found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
+</div>
+{% endblock %}
 
-    <script src="{{ url_for('static', filename='js/translations.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/language.js') }}"></script>
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/translations.js') }}"></script>
+<script src="{{ url_for('static', filename='js/language.js') }}"></script>
+<script>
+    document.getElementById('meeting-list').addEventListener('click', (e) => {
+        if (e.target.classList.contains('delete-meeting-btn')) {
+            // 클릭된 버튼에서 가장 가까운 tr 요소를 찾습니다.
+            const meetingRow = e.target.closest('tr');
+            if (!meetingRow) return;
 
-    <script>
-        document.getElementById('meeting-list').addEventListener('click', (e) => {
-            if (e.target.classList.contains('delete-meeting-btn')) {
-                const meetingItem = e.target.parentElement;
-                const meetingId = meetingItem.dataset.id;
-                const currentLang = window.getSavedLanguage(); // 저장된 언어 가져오기
-                const confirmMessage = translations[currentLang].confirm_delete_meeting; // 번역된 확인 메시지 사용
+            const meetingId = meetingRow.dataset.id;
+            const currentLang = window.getSavedLanguage ? window.getSavedLanguage() : 'en';
+            const confirmMessage = translations[currentLang]?.confirm_delete_meeting || 'Are you sure you want to delete this meeting?';
 
-                if (confirm(confirmMessage)) {
-                    fetch(`/api/meeting/delete/${meetingId}`, { method: 'DELETE' })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.success) {
-                            meetingItem.remove();
-                        } else {
-                            alert('Failed to delete meeting.');
-                        }
-                    });
-                }
+            if (confirm(confirmMessage)) {
+                fetch(`/api/meeting/delete/${meetingId}`, { method: 'DELETE' })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        meetingRow.remove();
+                    } else {
+                        alert('Failed to delete meeting.');
+                    }
+                });
             }
-        });
-    </script>
-</body>
-</html>
+        }
+    });
+</script>
+{% endblock %}

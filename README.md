@@ -7,12 +7,20 @@ This Flask application provides real-time transcription of speech and GPT-based 
    ```bash
    pip install -r requirements.txt
    ```
-2. Set required environment variables (see `.env.example` if provided).
+
+2. Copy `.env.example` to `.env` and fill in the required values
+   (at minimum `OPENAI_API_KEY`).
+
 3. Start the server
    ```bash
    python run.py
    ```
-4. Open `http://localhost:5000` in your browser.
+   The app listens on port 5000 by default. If you need to access it from
+   another machine, ensure the host is set to `0.0.0.0` in `run.py`.
+
+4. Open `http://localhost:5000` in your browser (or replace `localhost` if you
+   changed the host).
+
 **Note**: The old Streamlit version has been removed. Running `python app.py`
 will simply start the Flask server described above.
 

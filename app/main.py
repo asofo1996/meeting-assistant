@@ -53,11 +53,11 @@ def create_meeting():
     """새로운 미팅을 생성하고 ID를 반환합니다."""
     data = request.get_json()
     language = data.get('language', 'en-US')
-    
+
     # 미팅 제목을 생성 (예: "Meeting on 2025-07-22")
     title = f"Meeting on {time.strftime('%Y-%m-%d')}"
     new_meeting = Meeting(title=title, language=language)
-    
+
     db.session.add(new_meeting)
     db.session.commit()
     return jsonify({'meeting_id': new_meeting.id})
@@ -69,7 +69,7 @@ def create_style():
     name, prompt = data.get('name'), data.get('prompt')
     if not name or not prompt:
         return jsonify({'success': False, 'message': 'Name and prompt are required.'}), 400
-    
+
     new_style = AnswerStyle(name=name, prompt=prompt)
     db.session.add(new_style)
     db.session.commit()
@@ -124,7 +124,7 @@ def transcription_worker(stream, sid, meeting_id, language_code, answer_style_id
         config=config,
         interim_results=True
     )
-    
+
     try:
         requests = (speech.StreamingRecognizeRequest(audio_content=chunk) for chunk in stream())
         responses = client.streaming_recognize(streaming_config, requests)
@@ -135,9 +135,9 @@ def transcription_worker(stream, sid, meeting_id, language_code, answer_style_id
             result = response.results[0]
             if not result.alternatives:
                 continue
-            
+
             transcript = result.alternatives[0].transcript
-            
+
             if result.is_final:
                 with app.app_context():
                     current_app.logger.info(f"Final Transcript for {sid}: {transcript}")
@@ -148,9 +148,9 @@ def transcription_worker(stream, sid, meeting_id, language_code, answer_style_id
                     )
                     db.session.add(new_transcript)
                     db.session.commit()
-                    
+
                     socketio.emit('final_transcript', {'transcript': transcript}, room=sid)
-                    
+
                     style = AnswerStyle.query.get(answer_style_id)
                     prompt = style.prompt if style else "Answer professionally."
                     suggestion = get_gpt_suggestion(transcript, prompt)
@@ -219,4 +219,3 @@ def handle_change_style(data):
     sid = request.sid
     new_style_id = data.get('answer_style_id')
     current_app.logger.info(f"Client {sid} changed style to {new_style_id}")
-    

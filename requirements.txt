@@ -6,3 +6,4 @@ google-cloud-speech
 google-cloud-secret-manager
 openai
 pg8000
+gevent-websocket

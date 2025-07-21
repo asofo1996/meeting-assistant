@@ -1,7 +1,7 @@
 runtime: python311
 instance_class: F2
 
-entrypoint: gunicorn -b :$PORT run:app
+entrypoint: gunicorn --worker-class gevent -w 1 run:socketio
 
 env_variables:
   INSTANCE_CONNECTION_NAME: "realtime-meeting-app-465901:asia-northeast3:meeting-db"

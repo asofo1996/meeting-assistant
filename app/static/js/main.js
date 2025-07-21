@@ -1,138 +1,141 @@
-// 전역 변수 설정
-let socket;
-let audioContext;
-let isRecording = false;
-let currentTranscriptRow = null;
+document.addEventListener('DOMContentLoaded', () => {
+    const startStopBtn = document.getElementById('start-stop-btn');
+    const statusDiv = document.getElementById('status');
+    const chatLog = document.getElementById('chat-log');
+    const answerStyleSelect = document.getElementById('answer-style-select');
 
-// HTML 문서에서 필요한 요소들을 미리 찾아 변수에 저장합니다.
-const startBtn = document.getElementById('start-record-btn');
-const stopBtn = document.getElementById('stop-record-btn');
-const statusText = document.getElementById('status-text');
-const transcriptSheet = document.getElementById('transcript-sheet');
-const styleSelect = document.getElementById('style-select');
+    let socket;
+    let audioContext;
+    let processor;
+    let isRecording = false;
 
-// (수정됨) 연결 방식을 기본값으로 되돌려, 가장 효율적인 WebSocket을 먼저 시도하도록 합니다.
-socket = io();
+    // 네임스페이스 없이 소켓 연결
+    socket = io();
 
-socket.on('connect', () => {
-    console.log('진단 1: 서버에 성공적으로 연결되었습니다.');
-});
+    socket.on('connect', () => {
+        console.log('Socket connected!');
+    });
 
-// 녹음 시작 버튼 클릭 이벤트
-startBtn.addEventListener('click', async () => {
-    if (isRecording || !socket.connected) return;
-    console.log('진단 2: 녹음 시작 버튼이 클릭되었습니다.');
+    socket.on('disconnect', () => {
+        console.log('Socket disconnected!');
+    });
 
-    try {
-        // 사용자의 마이크에 접근하여 오디오 스트림을 가져옵니다.
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        console.log('진단 3: 마이크 접근에 성공했습니다. 스트림이 생성되었습니다.');
+    // 서버로부터 AI 응답을 받았을 때
+    socket.on('ai_response', (data) => {
+        addChatMessage('ai', data.text);
+    });
+
+    // 서버로부터 중간 음성 인식 결과를 받았을 때
+    socket.on('interim_transcript', (data) => {
+        updateLastCustomerMessage(data.transcript);
+    });
+    
+    // 서버로부터 최종 음성 인식 결과를 받았을 때
+    socket.on('final_transcript', (data) => {
+        updateLastCustomerMessage(data.transcript, true);
+    });
+
+    // 채팅 메시지를 화면에 추가하는 함수
+    function addChatMessage(sender, text) {
+        const messageWrapper = document.createElement('div');
+        const messageBubble = document.createElement('div');
+        const messageParagraph = document.createElement('p');
         
-        // 오디오 처리를 위한 AudioContext를 생성합니다.
-        audioContext = new AudioContext();
-        // 별도의 스레드에서 오디오를 처리할 audio-processor.js 파일을 로드합니다.
-        await audioContext.audioWorklet.addModule('/static/js/audio-processor.js');
-        console.log('진단 4: 오디오 워크릿 모듈을 성공적으로 로드했습니다.');
-        
-        const source = audioContext.createMediaStreamSource(stream);
-        const workletNode = new AudioWorkletNode(audioContext, 'resampling-processor');
+        messageParagraph.innerHTML = text; // innerHTML을 사용하여 HTML 태그(예: <br>)를 렌더링
 
-        // 오디오 워크릿이 처리한 음성 데이터를 서버로 전송합니다.
-        workletNode.port.onmessage = (event) => {
-            console.log('진단 5: 오디오 청크를 성공적으로 처리하여 서버로 전송합니다.');
-            socket.emit('audio_stream', { 'data': event.data });
-        };
-        
-        source.connect(workletNode);
-        workletNode.connect(audioContext.destination);
-
-        isRecording = true;
-        updateButtonState();
-        statusText.textContent = translations[window.getSavedLanguage()].status_recording;
-
-        // 서버에 녹음 시작을 알립니다.
-        socket.emit('start_transcription', {
-            meeting_id: MEETING_ID,
-            language: LANGUAGE_CODE,
-            style_id: styleSelect.value
-        });
-
-    } catch (error) {
-        console.error('진단 실패: 녹음 시작 중 오류가 발생했습니다.', error);
-        statusText.textContent = translations[window.getSavedLanguage()].status_error;
-    }
-});
-
-// -- 아래는 변경되지 않은 나머지 코드입니다 --
-
-socket.on('transcript_update', (data) => {
-    if (!currentTranscriptRow) {
-        createNewRow();
-    }
-    const transcriptCell = currentTranscriptRow.querySelector('.transcript-cell');
-    transcriptCell.textContent = data.transcript;
-    if (data.is_final) {
-        transcriptCell.classList.remove('interim');
-        currentTranscriptRow = null;
-    } else {
-        transcriptCell.classList.add('interim');
-    }
-});
-
-socket.on('final_result', (data) => {
-    const rows = transcriptSheet.querySelectorAll('.sheet-row');
-    for (let i = rows.length - 1; i >= 0; i--) {
-        const row = rows[i];
-        const textCell = row.querySelector('.transcript-cell');
-        if (textCell && textCell.textContent.trim() === data.text.trim() && !row.dataset.id) {
-            row.dataset.id = data.transcript_id;
-            const gptCell = row.querySelector('.gpt-cell');
-            if (gptCell) gptCell.textContent = data.gpt_response;
-            break;
+        if (sender === 'customer') {
+            messageWrapper.className = 'flex items-end gap-3 customer-message-wrapper';
+            messageBubble.className = 'bg-blue-600 text-white p-4 rounded-lg rounded-bl-none max-w-xl';
+        } else { // AI
+            messageWrapper.className = 'flex items-end justify-end gap-3';
+            messageBubble.className = 'bg-gray-600 text-white p-4 rounded-lg rounded-br-none max-w-xl';
         }
+
+        messageBubble.appendChild(messageParagraph);
+        messageWrapper.appendChild(messageBubble);
+        chatLog.appendChild(messageWrapper);
+        
+        // 스크롤을 맨 아래로 이동
+        chatLog.scrollTop = chatLog.scrollHeight;
     }
-});
 
-stopBtn.addEventListener('click', () => {
-    if (!isRecording) return;
-    isRecording = false;
-    updateButtonState();
-    statusText.textContent = translations[window.getSavedLanguage()].status_stopping;
-    socket.emit('stop_transcription', {});
-    if (audioContext && audioContext.state !== 'closed') {
-        audioContext.close().then(() => {
-            statusText.textContent = translations[window.getSavedLanguage()].status_stopped;
-        });
+    // 고객의 마지막 메시지를 업데이트하는 함수
+    function updateLastCustomerMessage(transcript, isFinal = false) {
+        let lastMessageWrapper = chatLog.querySelector('.customer-message-wrapper:last-of-type');
+        
+        if (!lastMessageWrapper || isFinal) {
+            // 마지막 메시지가 없거나, 최종 결과물이면 새 메시지 추가
+            addChatMessage('customer', transcript);
+        } else {
+            // 중간 결과물이면 마지막 메시지 내용 업데이트
+            lastMessageWrapper.querySelector('p').textContent = transcript;
+        }
+        chatLog.scrollTop = chatLog.scrollHeight;
     }
+
+
+    startStopBtn.addEventListener('click', async () => {
+        if (!isRecording) {
+            try {
+                // 오디오 컨텍스트 및 스트림 시작
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                const source = audioContext.createMediaStreamSource(stream);
+
+                await audioContext.audioWorklet.addModule('/static/js/audio-processor.js');
+                processor = new AudioWorkletNode(audioContext, 'audio-processor');
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                processor.port.onmessage = (event) => {
+                    const audioData = event.data;
+                    socket.emit('audio_stream', audioData);
+                };
+
+                // 녹음 시작 상태로 UI 업데이트
+                isRecording = true;
+                startStopBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-square"><rect width="18" height="18" x="3" y="3" rx="2"/></svg>
+                    <span>Stop Meeting</span>`;
+                startStopBtn.classList.remove('bg-green-600', 'hover:bg-green-700');
+                startStopBtn.classList.add('bg-red-600', 'hover:bg-red-700');
+                statusDiv.textContent = 'Recording...';
+                statusDiv.classList.add('text-red-400');
+                
+                socket.emit('start_session', { 
+                    answer_style_id: answerStyleSelect.value,
+                    sample_rate: audioContext.sampleRate
+                });
+                console.log('Recording started');
+
+            } catch (error) {
+                console.error('Error starting recording:', error);
+                alert('Could not start recording. Please check microphone permissions.');
+            }
+        } else {
+            // 녹음 중지
+            if (processor) processor.port.postMessage({ command: 'stop' });
+            if (audioContext) await audioContext.close();
+
+            isRecording = false;
+            startStopBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-mic"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>
+                <span>Start Meeting</span>`;
+            startStopBtn.classList.remove('bg-red-600', 'hover:bg-red-700');
+            startStopBtn.classList.add('bg-green-600', 'hover:bg-green-700');
+            statusDiv.textContent = 'Meeting Ended';
+            statusDiv.classList.remove('text-red-400');
+            
+            socket.emit('stop_session');
+            console.log('Recording stopped');
+        }
+    });
+
+    // 답변 스타일 변경 시 서버에 알림
+    answerStyleSelect.addEventListener('change', () => {
+        if (isRecording) {
+            socket.emit('change_style', { answer_style_id: answerStyleSelect.value });
+            console.log('Answer style changed to:', answerStyleSelect.value);
+        }
+    });
 });
-
-styleSelect.addEventListener('change', () => {
-    if (isRecording) {
-        socket.emit('change_style', { style_id: styleSelect.value });
-    }
-});
-
-socket.on('style_changed_ack', (data) => {
-    console.log(data.message);
-});
-
-function updateButtonState() {
-    startBtn.disabled = isRecording;
-    stopBtn.disabled = !isRecording;
-}
-
-function createNewRow() {
-    const row = document.createElement('div');
-    row.className = 'sheet-row';
-    const cell1 = document.createElement('div');
-    cell1.className = 'sheet-cell transcript-cell';
-    cell1.textContent = '...';
-    const cell2 = document.createElement('div');
-    cell2.className = 'sheet-cell gpt-cell';
-    cell2.textContent = '...';
-    row.appendChild(cell1);
-    row.appendChild(cell2);
-    transcriptSheet.appendChild(row);
-    transcriptSheet.scrollTop = transcriptSheet.scrollHeight;
-    currentTranscriptRow = row;
-}

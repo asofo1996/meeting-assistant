@@ -3,7 +3,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 
-# 데이터베이스와 소켓 객체 모두 생성
 db = SQLAlchemy()
 socketio = SocketIO()
 
@@ -33,7 +32,8 @@ def create_app(debug=False):
 
     with app.app_context():
         from . import main, models
-        # 첫 배포 이후에는 이 줄을 주석 처리하는 것이 좋습니다.
-        db.create_all()
+        # 테이블은 이미 생성되었으므로, 이 줄을 주석 처리하여 시작 부담을 줄입니다.
+        # db.create_all()
         app.register_blueprint(main.main)
         return app
+    

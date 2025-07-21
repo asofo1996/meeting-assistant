@@ -3,18 +3,17 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 
-# 데이터베이스 객체 다시 생성
+# 데이터베이스와 소켓 객체 모두 생성
 db = SQLAlchemy()
-# 소켓 객체는 아직 생성하지 않음
-# socketio = SocketIO() 
+socketio = SocketIO()
 
 def create_app(debug=False):
-    """Create an application with Database support."""
+    """Create the final, full-featured application."""
     app = Flask(__name__)
     app.debug = debug
     app.config['SECRET_KEY'] = 'gjr39dkjn344_!67#'
 
-    # --- 프로덕션 데이터베이스 설정 복원 ---
+    # --- 프로덕션 데이터베이스 설정 ---
     db_user = os.environ.get("DB_USER")
     db_pass = os.environ.get("DB_PASS")
     db_name = os.environ.get("DB_NAME")
@@ -28,14 +27,13 @@ def create_app(debug=False):
     app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
-    # 데이터베이스 앱 초기화
+    # 데이터베이스와 소켓 앱 초기화
     db.init_app(app)
-    # 소켓 초기화는 다음 단계에서 진행
-    # socketio.init_app(app)
+    socketio.init_app(app, async_mode='gevent')
 
     with app.app_context():
         from . import main, models
-        # 데이터베이스 테이블을 생성하는 코드를 다시 활성화
-        db.create_all() 
+        # 첫 배포 이후에는 이 줄을 주석 처리하는 것이 좋습니다.
+        db.create_all()
         app.register_blueprint(main.main)
         return app

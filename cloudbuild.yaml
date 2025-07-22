@@ -1,0 +1,13 @@
+# cloudbuild.yaml
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  # 'worker.Dockerfile'을 사용하여 이미지를 빌드하라고 명시합니다.
+  - 'build'
+  - '--tag'
+  - 'gcr.io/realtime-meeting-app-465901/meeting-assistant-worker'
+  - '.'
+  - '--file'
+  - 'worker.Dockerfile'
+images:
+- 'gcr.io/realtime-meeting-app-465901/meeting-assistant-worker'

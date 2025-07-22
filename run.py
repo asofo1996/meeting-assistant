@@ -1,11 +1,10 @@
 # run.py
 
-import os
-from app import create_app, socketio
+from app import create_app
 
 # Application Factory를 호출하여 앱 인스턴스를 생성합니다.
-app = create_app(debug=os.environ.get('FLASK_ENV') == 'development')
+app = create_app()
 
-# 로컬 실행 및 Gunicorn entrypoint를 위해 남겨둡니다.
+# 로컬 실행을 위한 부분
 if __name__ == '__main__':
-    socketio.run(app)
+    app.run()

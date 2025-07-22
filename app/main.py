@@ -1,18 +1,19 @@
+# app/main.py
+
 import os
 import time
 from flask import Blueprint, render_template, request, jsonify, current_app
-# from google.cloud import speech # 일시적으로 비활성화
-from gevent.queue import Queue
-
 from . import db, socketio
 from .models import Meeting, Transcript, AnswerStyle
-from .utils import get_openai_client, get_gpt_suggestion
+from .utils import get_gpt_suggestion
+from .speech_worker import SpeechWorker
 
 main = Blueprint('main', __name__)
 
-clients = {}
+# 각 클라이언트(sid)에 대한 워커 인스턴스를 저장하는 딕셔너리
+workers = {}
 
-# --- 모든 페이지 라우팅과 API는 그대로 유지 ---
+# --- 라우팅 ---
 @main.route('/')
 def index():
     return render_template('index.html')
@@ -22,7 +23,8 @@ def meeting_room(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
     styles = AnswerStyle.query.all()
     transcripts = Transcript.query.filter_by(meeting_id=meeting_id).order_by(Transcript.timestamp).all()
-    return render_template('meeting.html', meeting=meeting, styles=styles, transcripts=transcripts)
+    # meeting.html 템플릿에 meeting_id를 전달하도록 수정
+    return render_template('meeting.html', meeting=meeting, styles=styles, transcripts=transcripts, meeting_id=meeting_id)
 
 @main.route('/history')
 def history():
@@ -38,17 +40,16 @@ def styles():
 def health_check():
     return 'OK', 200
 
+# --- API ---
 @main.route('/api/meeting/create', methods=['POST'])
 def create_meeting():
     data = request.get_json()
     language = data.get('language', 'en-US')
-    title = f"Meeting on {time.strftime('%Y-%m-%d')}"
-    new_meeting = Meeting(title=title, language=language)
+    new_meeting = Meeting(language=language)
     db.session.add(new_meeting)
     db.session.commit()
     return jsonify({'meeting_id': new_meeting.id})
 
-# --- 다른 모든 API 라우트도 그대로 유지 ---
 @main.route('/api/style/create', methods=['POST'])
 def create_style():
     data = request.get_json()
@@ -60,7 +61,6 @@ def create_style():
     db.session.commit()
     return jsonify({'success': True, 'id': new_style.id})
 
-
 @main.route('/api/style/delete/<int:style_id>', methods=['DELETE'])
 def delete_style(style_id):
     style = AnswerStyle.query.get_or_404(style_id)
@@ -68,80 +68,94 @@ def delete_style(style_id):
     db.session.commit()
     return jsonify({'success': True})
 
-
 @main.route('/api/meeting/delete/<int:meeting_id>', methods=['DELETE'])
 def delete_meeting(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
-    Transcript.query.filter_by(meeting_id=meeting_id).delete()
     db.session.delete(meeting)
     db.session.commit()
     return jsonify({'success': True})
 
-
-# --- 실시간 Socket.IO 통신 ---
-
-class AudioStream:
-    """오디오 스트림을 관리하는 클래스."""
-    def __init__(self):
-        self.queue = Queue()
-    def __call__(self):
-        while True:
-            chunk = self.queue.get()
-            if chunk is None:
-                return
-            yield chunk
-    def put(self, data):
-        self.queue.put(data)
-
-# def transcription_worker(...):
-#     """
-#     백그라운드에서 음성 인식을 처리하는 워커 함수.
-#     가장 유력한 충돌 원인이므로, 이 함수 전체를 일시적으로 주석 처리합니다.
-#     """
-#     pass
-
+# --- Socket.IO ---
 @socketio.on('connect')
 def handle_connect():
     current_app.logger.info(f"Client connected: {request.sid}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    if request.sid in clients:
-        # clients[request.sid]['stream'].put(None) # 스트림도 비활성화
-        del clients[request.sid]
-    current_app.logger.info(f"Client disconnected: {request.sid}")
+    sid = request.sid
+    if sid in workers:
+        workers[sid].close()
+        del workers[sid]
+    current_app.logger.info(f"Client disconnected: {sid}")
 
 @socketio.on('start_session')
 def handle_start_session(data):
-    """
-    클라이언트가 녹음 시작을 요청할 때, 백그라운드 작업 호출을 비활성화합니다.
-    이렇게 하면 서버가 충돌하지 않고 최소한 실행 상태를 유지하는지 확인할 수 있습니다.
-    """
     sid = request.sid
-    if sid in clients:
+    if sid in workers:
+        current_app.logger.warning(f"Session already started for {sid}")
         return
-    
-    clients[sid] = {} # 빈 딕셔너리로 클라이언트 상태만 유지
-    
-    # 'worker': socketio.start_background_task(...)
-    # 문제의 핵심인 이 라인을 주석 처리합니다.
 
-    current_app.logger.info(f"Session minimally started for {sid} (debug mode)")
+    meeting_id = data.get('meeting_id')
+    meeting = Meeting.query.get(meeting_id)
+    if not meeting:
+        current_app.logger.error(f"Meeting {meeting_id} not found for session {sid}")
+        return
+
+    try:
+        worker = SpeechWorker(socketio, sid, language_code=meeting.language)
+        workers[sid] = worker
+        socketio.start_background_task(worker.process)
+        current_app.logger.info(f"Speech worker started for {sid} in meeting {meeting_id}")
+    except Exception as e:
+        current_app.logger.error(f"Failed to start speech worker for {sid}: {e}")
 
 @socketio.on('audio_stream')
 def handle_audio_stream(audio_data):
-    # 백그라운드 작업이 없으므로 아무것도 하지 않습니다.
-    pass
+    sid = request.sid
+    if sid in workers:
+        workers[sid].add_audio_chunk(audio_data)
 
 @socketio.on('stop_session')
 def handle_stop_session():
     sid = request.sid
-    if sid in clients:
-        del clients[sid]
-        current_app.logger.info(f"Session stopped for {sid} (debug mode)")
+    if sid in workers:
+        workers[sid].close()
+        del workers[sid]
+        current_app.logger.info(f"Session stopped for {sid}")
 
-@socketio.on('change_style')
-def handle_change_style(data):
+@socketio.on('final_transcript')
+def handle_gpt_suggestion(data):
+    """최종 인식 결과가 나오면 GPT 제안을 요청하고 AI 응답을 보냅니다."""
     sid = request.sid
-    new_style_id = data.get('answer_style_id')
-    current_app.logger.info(f"Client {sid} changed style to {new_style_id}")
+    transcript = data.get('transcript')
+
+    # TODO: 클라이언트에서 answer_style_id와 meeting_id를 받아와야 함
+    # 이 예시에서는 임시로 첫 번째 스타일을 사용합니다.
+    answer_style = AnswerStyle.query.first()
+    meeting = Meeting.query.first() # 실제로는 해당 세션의 미팅을 찾아야 함
+
+    if not transcript or not answer_style or not meeting:
+        return
+
+    try:
+        suggestion = get_gpt_suggestion(transcript, answer_style.prompt, meeting.language)
+        socketio.emit('ai_response', {'text': suggestion}, to=sid)
+        current_app.logger.info(f"Sent AI suggestion to {sid}")
+
+        # DB에 대화 내용 저장
+        new_transcript = Transcript(
+            meeting_id=meeting.id,
+            speaker='Customer', # 또는 'User'
+            text=transcript
+        )
+        ai_transcript = Transcript(
+            meeting_id=meeting.id,
+            speaker='AI',
+            text=suggestion
+        )
+        db.session.add(new_transcript)
+        db.session.add(ai_transcript)
+        db.session.commit()
+
+    except Exception as e:
+        current_app.logger.error(f"Error getting GPT suggestion or saving transcript: {e}")

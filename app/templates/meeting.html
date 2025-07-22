@@ -44,6 +44,11 @@
 
 {% block scripts %}
 <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-<script src="{{ url_for('static', filename='js/audio-processor.js') }}"></script>
+
+<script>
+    // main.js에서 사용할 수 있도록 meeting_id를 전역 변수로 설정
+    const MEETING_ID = {{ meeting_id }};
+</script>
+
 <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 {% endblock %}

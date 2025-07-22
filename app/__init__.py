@@ -6,9 +6,7 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_socketio import SocketIO
 
-# 로깅 설정
 logging.basicConfig(level=logging.INFO)
-
 db = SQLAlchemy()
 socketio = SocketIO()
 
@@ -17,8 +15,6 @@ def create_app():
     app = Flask(__name__)
     logging.info("Application factory 'create_app' started.")
 
-    # [⭐️핵심 수정⭐️] Secret Manager 접속 코드를 모두 삭제하고,
-    # Cloud Run이 주입해 줄 환경변수에서 직접 데이터베이스 URI를 읽어옵니다.
     db_uri = os.environ.get('DATABASE_URI')
     if not db_uri:
         logging.error("CRITICAL FAILURE: DATABASE_URI environment variable is not set.")
@@ -30,6 +26,18 @@ def create_app():
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
     db.init_app(app)
+
+    # [⭐️핵심 수정⭐️] 앱 컨텍스트 안에서 데이터베이스 테이블을 생성합니다.
+    # 이 과정에서 DB 연결을 시도하며, 문제가 있다면 배포 로그에 명확한 오류를 남깁니다.
+    with app.app_context():
+        try:
+            # import models here to ensure they are registered with SQLAlchemy
+            from . import models
+            db.create_all()
+            logging.info("Database tables created successfully (or already exist).")
+        except Exception as e:
+            logging.error(f"CRITICAL FAILURE: Could not create database tables. Error: {e}", exc_info=True)
+            raise RuntimeError("Failed to create database tables") from e
     
     from .main import main as main_blueprint
     app.register_blueprint(main_blueprint)

@@ -1,34 +1,28 @@
+# app/utils.py
+
+import os
 import openai
-from flask import current_app
 
-def get_gpt_suggestion(text, style_prompt, language):
+def get_gpt_suggestion(transcript, style_prompt, language="en"):
+    """GPT-3.5-turbo를 사용하여 응답을 생성합니다."""
+    
+    # [⭐️핵심 수정⭐️] OpenAI API 키도 환경변수에서 직접 읽어옵니다.
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if not api_key:
+        # 이 함수는 앱 실행 중에 호출되므로, 오류가 발생해도 서버가 멈추지는 않습니다.
+        return "Error: OPENAI_API_KEY is not configured."
+        
+    openai.api_key = api_key
+
     try:
-        language_map = {
-            'en-US': 'English',
-            'es-ES': 'Spanish',
-            'ko-KR': 'Korean'
-        }
-        target_language = language_map.get(language, 'English')
-
-        # 시스템 메시지를 통해 GPT의 역할과 언어를 명확히 지정
-        system_message = f"You are a helpful meeting assistant. The user is in a business meeting. Based on their speech, provide a concise, actionable, and helpful response or suggestion to advance the meeting. {style_prompt}. Please respond in {target_language}."
-
-        response = openai.chat.completions.create(
-            model="gpt-4o",  # 최신 모델 사용 권장
+        completion = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": system_message},
-                {"role": "user", "content": text}
-            ],
-            max_tokens=100,
-            temperature=0.7,
+                {"role": "system", "content": style_prompt},
+                {"role": "user", "content": f"Based on the following transcript, provide a response in {language}. Transcript: {transcript}"}
+            ]
         )
-        suggestion = response.choices[0].message.content.strip()
-        return suggestion
+        return completion.choices[0].message.content
     except Exception as e:
-        current_app.logger.error(f"Error getting GPT suggestion: {e}")
-        error_messages = {
-            'en-US': "AI response could not be generated.",
-            'es-ES': "No se pudo generar la respuesta de la IA.",
-            'ko-KR': "AI 답변을 생성할 수 없습니다."
-        }
-        return error_messages[language]
+        print(f"Error calling OpenAI: {e}")
+        return f"Sorry, I encountered an error: {e}"

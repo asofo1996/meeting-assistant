@@ -5,5 +5,5 @@ gunicorn
 google-cloud-speech
 google-cloud-secret-manager
 openai
-pg8000
+psycopg2-binary
 gevent-websocket

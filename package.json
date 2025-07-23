@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@supabase/supabase-js": "^2.52.0",
+    "react-speech-recognition": "^4.0.1"
+  }
+}

@@ -3,6 +3,7 @@
 import os
 import time
 from flask import Blueprint, render_template, request, jsonify, current_app
+from sqlalchemy import text # ⭐️ 최종 진단을 위해 추가
 from . import db, socketio
 from .models import Meeting, Transcript, AnswerStyle
 from .utils import get_gpt_suggestion
@@ -10,10 +11,27 @@ from .speech_worker import SpeechWorker
 
 main = Blueprint('main', __name__)
 
-# 각 클라이언트(sid)에 대한 워커 인스턴스를 저장하는 딕셔너리
 workers = {}
 
-# --- 라우팅 ---
+# --- [⭐️ 최종 진단 코드 ⭐️] ---
+@main.route('/db-test')
+def db_test():
+    """데이터베이스 연결을 테스트하기 위한 가장 간단한 엔드포인트."""
+    try:
+        # 가장 기본적인 쿼리를 실행하여 연결을 테스트합니다.
+        result = db.session.execute(text('SELECT 1')).scalar()
+        if result == 1:
+            return jsonify({'status': 'success', 'message': 'Database connection is OK!'}), 200
+        else:
+            return jsonify({'status': 'failure', 'message': f'Query returned unexpected result: {result}'}), 500
+    except Exception as e:
+        # 오류 발생 시, 어떤 오류인지 명확하게 보여줍니다.
+        current_app.logger.error(f"Database connection test failed: {e}", exc_info=True)
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+# ------------------------------------
+
+
+# --- 기존 라우팅 (이하 코드는 그대로) ---
 @main.route('/')
 def index():
     return render_template('index.html')
@@ -23,7 +41,6 @@ def meeting_room(meeting_id):
     meeting = Meeting.query.get_or_404(meeting_id)
     styles = AnswerStyle.query.all()
     transcripts = Transcript.query.filter_by(meeting_id=meeting_id).order_by(Transcript.timestamp).all()
-    # meeting.html 템플릿에 meeting_id를 전달하도록 수정
     return render_template('meeting.html', meeting=meeting, styles=styles, transcripts=transcripts, meeting_id=meeting_id)
 
 @main.route('/history')
@@ -125,14 +142,14 @@ def handle_stop_session():
 
 @socketio.on('final_transcript')
 def handle_gpt_suggestion(data):
-    """최종 인식 결과가 나오면 GPT 제안을 요청하고 AI 응답을 보냅니다."""
     sid = request.sid
     transcript = data.get('transcript')
 
-    # TODO: 클라이언트에서 answer_style_id와 meeting_id를 받아와야 함
-    # 이 예시에서는 임시로 첫 번째 스타일을 사용합니다.
-    answer_style = AnswerStyle.query.first()
-    meeting = Meeting.query.first() # 실제로는 해당 세션의 미팅을 찾아야 함
+    answer_style_id = data.get('answer_style_id')
+    meeting_id = data.get('meeting_id')
+    
+    answer_style = AnswerStyle.query.get(answer_style_id)
+    meeting = Meeting.query.get(meeting_id)
 
     if not transcript or not answer_style or not meeting:
         return
@@ -142,10 +159,9 @@ def handle_gpt_suggestion(data):
         socketio.emit('ai_response', {'text': suggestion}, to=sid)
         current_app.logger.info(f"Sent AI suggestion to {sid}")
 
-        # DB에 대화 내용 저장
         new_transcript = Transcript(
             meeting_id=meeting.id,
-            speaker='Customer', # 또는 'User'
+            speaker='Customer',
             text=transcript
         )
         ai_transcript = Transcript(

@@ -1,9 +1,14 @@
+# requirements.txt
+
 Flask
 Flask-SocketIO
-Flask-SQLAlchemy
+# Flask-SQLAlchemy  <-- 이 줄을 삭제합니다.
 gunicorn
 google-cloud-speech
-google-cloud-secret-manager
+# google-cloud-secret-manager <-- 이 줄을 삭제합니다.
 openai
-psycopg2-binary
+# pg8000 <-- 이 줄을 삭제합니다.
+# psycopg2-binary <-- 이 줄을 삭제합니다.
 gevent-websocket
+google-cloud-firestore  # <-- 이 줄을 새로 추가합니다.
+google-cloud-storage    # <-- 음성 파일 저장을 위해 추가합니다.
